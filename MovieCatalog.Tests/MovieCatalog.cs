@@ -11,12 +11,6 @@ public class MovieCatalog
     private RestClient client;
     private static string? MovieId;
 
-    // OhOCRopPQL_First_name
-    // NEByVeaupC_Last_name
-    // CMPrMwpmGO_username
-    // xNVDNAmqHW@xNVDNAmqHW.com
-    // jnJkPySZuJ
-
     [OneTimeSetUp]
     public void Setup()
     {
@@ -132,11 +126,132 @@ public class MovieCatalog
         Assert.That(readyResponse.Msg, Is.EqualTo("Movie edited successfully!"), "Response message should indicate successful movie edit");
     }
 
-    // [Test]
-    // public void Test1()
-    // {
-    //     Assert.Pass();
-    // }
+    [Order(3)]
+    [Test]
+    public void Get_All_Movies_Should_Return_Success()
+    {
+        // Send a GET request to list all movies
+        RestRequest request = new RestRequest("api/Catalog/All", Method.Get);
+        RestResponse response = client.Execute(request);
+
+        // Assert that the response status code is OK (200)
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), "Response status code should be OK (200)");
+
+        if (string.IsNullOrWhiteSpace(response.Content))
+        {
+            throw new InvalidOperationException("Response content is null or empty.");
+        }
+
+        // Deserialize the response to a list of movies
+        List<MovieDto>? movies = JsonSerializer.Deserialize<List<MovieDto>>(response.Content);
+
+        // Assert that the response contains a non-empty array
+        Assert.That(movies, Is.Not.Null, "Movies list should not be null");
+        Assert.That(movies, Is.Not.Empty, "Movies list should not be empty");
+    }
+
+    [Order(4)]
+    [Test]
+    public void Delete_Movie_Should_Return_Success()
+    {
+        // Send a DELETE request to remove the movie using MovieId as a query parameter
+        RestRequest request = new RestRequest($"api/Movie/Delete?movieId={MovieId}", Method.Delete);
+        RestResponse response = client.Execute(request);
+
+        // Assert that the response status code is OK (200)
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK), "Response status code should be OK (200)");
+
+        if (string.IsNullOrWhiteSpace(response.Content))
+        {
+            throw new InvalidOperationException("Response content is null or empty.");
+        }
+        ApiResponseDto? readyResponse = JsonSerializer.Deserialize<ApiResponseDto>(response.Content);
+
+        // Assert that a response object is returned
+        Assert.That(readyResponse, Is.Not.Null, "Response should not be null");
+
+        // Assert that the response message indicates the movie was deleted successfully
+        Assert.That(readyResponse.Msg, Is.EqualTo("Movie deleted successfully!"), "Response message should indicate successful movie deletion");
+    }
+
+    [Order(5)]
+    [Test]
+    public void Create_Movie_WithoutRequiredFields_Should_Return_BadRequest()
+    {
+        // Create a movie with empty required fields (Title and Description) but with IsWatched set
+        MovieDto incompleteMovie = new MovieDto
+        {
+            Title = string.Empty,
+            Description = string.Empty,
+            IsWatched = true
+        };
+
+        RestRequest request = new RestRequest("api/Movie/Create", Method.Post);
+        request.AddJsonBody(incompleteMovie);
+        RestResponse response = client.Execute(request);
+
+        // Assert that the response status code is BadRequest (400)
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest), "Response status code should be BadRequest (400) when required fields are empty");
+    }
+
+    [Order(6)]
+    [Test]
+    public void Edit_NonExisting_Movie_Should_Return_BadRequest()
+    {
+        // Create a movie with updated values
+        MovieDto updatedMovie = new MovieDto
+        {
+            Title = "UpdatedTitle",
+            Description = "UpdatedDescription",
+            IsWatched = false
+        };
+
+        // Send a PUT request to edit a non-existing movie using a non-existent ID
+        string nonExistentMovieId = "non-existent-id-12345";
+        RestRequest request = new RestRequest($"api/Movie/Edit?movieId={nonExistentMovieId}", Method.Put);
+        request.AddJsonBody(updatedMovie);
+        RestResponse response = client.Execute(request);
+
+        // Assert that the response status code is BadRequest (400)
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest), "Response status code should be BadRequest (400) when movie does not exist");
+
+        if (string.IsNullOrWhiteSpace(response.Content))
+        {
+            throw new InvalidOperationException("Response content is null or empty.");
+        }
+        ApiResponseDto? readyResponse = JsonSerializer.Deserialize<ApiResponseDto>(response.Content);
+
+        // Assert that a response object is returned
+        Assert.That(readyResponse, Is.Not.Null, "Response should not be null");
+
+        // Assert that the response message indicates the movie could not be edited
+        Assert.That(readyResponse.Msg, Is.EqualTo("Unable to edit the movie! Check the movieId parameter or user verification!"), "Response message should indicate the movie could not be edited");
+    }
+
+    [Order(7)]
+    [Test]
+    public void Delete_NonExisting_Movie_Should_Return_BadRequest()
+    {
+        // Send a DELETE request to delete a non-existing movie using a non-existent ID
+        string nonExistentMovieId = "non-existent-id-12345";
+        RestRequest request = new RestRequest($"api/Movie/Delete?movieId={nonExistentMovieId}", Method.Delete);
+        RestResponse response = client.Execute(request);
+
+        // Assert that the response status code is BadRequest (400)
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest), "Response status code should be BadRequest (400) when movie does not exist");
+
+        if (string.IsNullOrWhiteSpace(response.Content))
+        {
+            throw new InvalidOperationException("Response content is null or empty.");
+        }
+        ApiResponseDto? readyResponse = JsonSerializer.Deserialize<ApiResponseDto>(response.Content);
+
+        // Assert that a response object is returned
+        Assert.That(readyResponse, Is.Not.Null, "Response should not be null");
+
+        // Assert that the response message indicates the movie could not be deleted
+        Assert.That(readyResponse.Msg, Is.EqualTo("Unable to delete the movie! Check the movieId parameter or user verification!"), "Response message should indicate the movie could not be deleted");
+    }
 
     [OneTimeTearDown]
     public void TearDown()
